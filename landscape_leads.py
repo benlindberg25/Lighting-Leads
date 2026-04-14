@@ -632,7 +632,22 @@ class LeadGenerator:
         log.info(f"  Max homes: {MAX_TOTAL}  |  Output: {OUTPUT_DIR}")
         log.info(f"{'═'*60}")
 
-        properties = self.collect_properties()
+        # ── Auto-resume: skip search if leads already exist ────────────────
+        existing_leads_file = OUTPUT_DIR / "all_leads.json"
+        if existing_leads_file.exists():
+            try:
+                with open(existing_leads_file) as f:
+                    existing = json.load(f)
+                if existing:
+                    log.info(f"📋 Loaded {len(existing)} existing leads — skipping search, going straight to renderings")
+                    properties = existing
+                else:
+                    properties = self.collect_properties()
+            except Exception:
+                properties = self.collect_properties()
+        else:
+            properties = self.collect_properties()
+        # ─────────────────────────────────────────────────────────────────
 
         if not properties:
             log.warning(
