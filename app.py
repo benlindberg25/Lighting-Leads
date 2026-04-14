@@ -272,7 +272,7 @@ def get_result_folders() -> list[Path]:
     folders = []
     for item in LEADS_DIR.iterdir():
         if item.is_dir() and not item.name.startswith("."):
-            if (item / "original.jpg").exists():
+            if (item / "with_landscape_lighting.jpg").exists() or (item / "original.jpg").exists():
                 folders.append(item)
     folders.sort(key=lambda p: p.stat().st_mtime, reverse=True)
     return folders
