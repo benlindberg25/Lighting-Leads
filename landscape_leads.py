@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+════════════════════════════════════════════════════════════════════
   LUXURY HOME LANDSCAPE LIGHTING LEAD GENERATOR  v2.0
-  For Landscape Lighting Businesses â Long Island, NY
-ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  For Landscape Lighting Businesses – Long Island, NY
+════════════════════════════════════════════════════════════════════
 Finds homes sold $1.3M+ in Northern Nassau + all of Suffolk County.
 Uses Redfin county-level API (2 requests vs 107 per-town searches).
 Downloads exterior photos. Generates AI landscape lighting renders.
@@ -27,9 +27,9 @@ from bs4 import BeautifulSoup
 from PIL import Image
 import openai
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────
 # CLI ARGUMENTS
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────
 def parse_args():
     p = argparse.ArgumentParser(description="Landscape Lighting Lead Generator")
     p.add_argument("--min-price",   type=int, default=1_300_000)
@@ -49,9 +49,9 @@ REQUEST_DELAY    = 2.5   # seconds between requests
 
 OUTPUT_DIR = Path(args.output_dir) if args.output_dir else Path(__file__).parent / "leads_output"
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────
 # TARGET TOWNS (fallback if county search fails)
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────
 NORTHERN_NASSAU = [
     "Great Neck","Port Washington","Manhasset","Roslyn","Glen Cove",
     "Oyster Bay","Locust Valley","Brookville","Old Westbury","Muttontown",
@@ -65,9 +65,9 @@ SUFFOLK_TOWNS = [
     "Water Mill","Quogue","Shelter Island","Melville","Dix Hills","Woodbury",
 ]
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────
 # LOGGING  (FlushingHandler so Streamlit sees output immediately)
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 log_file = OUTPUT_DIR / f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
 
@@ -87,9 +87,9 @@ logging.basicConfig(
 )
 log = logging.getLogger("leads")
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-# REDFIN SCRAPER  (county-level â 2 searches instead of 107)
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────
+# REDFIN SCRAPER  (county-level – 2 searches instead of 107)
+# ─────────────────────────────────────────────────────────────────
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -101,9 +101,10 @@ HEADERS = {
 }
 
 # Known Redfin county region IDs for Long Island
+# Verified via: redfin.com/stingray/do/location-autocomplete?location=Nassau+County+NY&v=2
 REDFIN_COUNTIES = [
-    {"name": "Nassau County, NY",  "region_id": "1329", "region_type": "5"},
-    {"name": "Suffolk County, NY", "region_id": "1330", "region_type": "5"},
+    {"name": "Nassau County, NY",  "region_id": "1974", "region_type": "5"},
+    {"name": "Suffolk County, NY", "region_id": "1996", "region_type": "5"},
 ]
 
 
@@ -114,18 +115,22 @@ class RedfinScraper:
         self.session = requests.Session()
         self.session.headers.update(HEADERS)
 
-    # ââ internal GET with delay ââââââââââââââââââââââââââââââââââ
+    # ── internal GET with delay ──────────────────────────────────
     def _get(self, url: str, **kwargs) -> Optional[requests.Response]:
         time.sleep(REQUEST_DELAY)
         try:
             r = self.session.get(url, timeout=30, **kwargs)
+            log.info(f"  HTTP {r.status_code} ← {url[:80]}")
+            if r.status_code == 200 and r.text[:9].lstrip().startswith("<!"):
+                log.warning(f"  ⚠ Got HTML instead of data (bot-detection?) — first 120 chars: {r.text[:120]!r}")
+                return None
             r.raise_for_status()
             return r
         except Exception as e:
-            log.warning(f"  â  Request failed: {e}")
+            log.warning(f"  ⚠ Request failed ({type(e).__name__}): {e}")
             return None
 
-    # ââ dynamic region ID lookup via autocomplete ââââââââââââââââ
+    # ── dynamic region ID lookup via autocomplete ────────────────
     def get_region_id(self, location: str) -> Optional[Tuple[str, str]]:
         """Returns (region_id, region_type) for a county or city name."""
         url = f"{self.BASE}/stingray/do/location-autocomplete"
@@ -150,9 +155,9 @@ class RedfinScraper:
             log.debug(f"  Autocomplete parse error: {e}")
         return None
 
-    # ââ county-level CSV download ââââââââââââââââââââââââââââââââ
+    # ── county-level CSV download ────────────────────────────────
     def search_county_csv(self, region_id: str, min_price: int, max_age_days: int) -> List[Dict]:
-        """Redfin's GIS-CSV endpoint â returns up to 350 sold listings."""
+        """Redfin's GIS-CSV endpoint – returns up to 350 sold listings."""
         url = f"{self.BASE}/stingray/api/gis-csv"
         params = {
             "al": 1, "market": "newyork", "v": 8,
@@ -165,10 +170,12 @@ class RedfinScraper:
             "num_homes": 350,
             "sf": "1,2,3,5,6,7",
         }
-        log.info(f"  â³ Fetching sold listings CSV (region_id={region_id})â¦")
+        log.info(f"  ↳ Fetching sold listings CSV (region_id={region_id})…")
         r = self._get(url, params=params)
         if not r:
+            log.warning("  ✗ CSV request returned no response")
             return []
+        log.info(f"  CSV response length: {len(r.text)} chars, first 120: {r.text[:120]!r}")
         try:
             reader = csv.DictReader(io.StringIO(r.text))
             results = []
@@ -203,13 +210,13 @@ class RedfinScraper:
                         })
                 except Exception:
                     continue
-            log.info(f"  â {len(results)} homes found in CSV")
+            log.info(f"  ✓ {len(results)} homes found in CSV")
             return results
         except Exception as e:
             log.warning(f"  CSV parse error: {e}")
             return []
 
-    # ââ county-level GIS JSON (fallback) ââââââââââââââââââââââââ
+    # ── county-level GIS JSON (fallback) ────────────────────────
     def search_county_gis(self, region_id: str, min_price: int, max_age_days: int) -> List[Dict]:
         url = f"{self.BASE}/stingray/api/gis"
         params = {
@@ -223,7 +230,7 @@ class RedfinScraper:
             "num_homes": 350,
             "sf": "1,2,3,5,6,7",
         }
-        log.info(f"  â³ Trying GIS JSON fallback (region_id={region_id})â¦")
+        log.info(f"  ↳ Trying GIS JSON fallback (region_id={region_id})…")
         r = self._get(url, params=params)
         if not r:
             return []
@@ -262,13 +269,13 @@ class RedfinScraper:
                         })
                 except Exception:
                     continue
-            log.info(f"  â {len(results)} homes found via GIS")
+            log.info(f"  ✓ {len(results)} homes found via GIS")
             return results
         except Exception as e:
             log.warning(f"  GIS parse error: {e}")
             return []
 
-    # ââ per-town fallback âââââââââââââââââââââââââââââââââââââââââ
+    # ── per-town fallback ─────────────────────────────────────────
     def search_town(self, town: str, min_price: int, max_age_days: int) -> List[Dict]:
         years = max(1, max_age_days // 365)
         slug  = town.replace(" ", "-")
@@ -276,7 +283,7 @@ class RedfinScraper:
             f"{self.BASE}/NY/{slug}/"
             f"filter/min-price={min_price},include=sold-{years}yr,property-type=house"
         )
-        log.info(f"  â³ Redfin town search: {town}, NYâ¦")
+        log.info(f"  ↳ Redfin town search: {town}, NY…")
         r = self._get(url)
         if not r:
             return []
@@ -316,10 +323,10 @@ class RedfinScraper:
         except Exception as e:
             log.debug(f"  HTML parse error: {e}")
 
-        log.info(f"  â {len(results)} homes in {town}")
+        log.info(f"  ✓ {len(results)} homes in {town}")
         return results
 
-    # ââ get exterior photo URL from detail page ââââââââââââââââââ
+    # ── get exterior photo URL from detail page ──────────────────
     def get_exterior_photo(self, redfin_url: str) -> Optional[str]:
         if not redfin_url:
             return None
@@ -358,9 +365,9 @@ class RedfinScraper:
             return None
 
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────
 # AI LANDSCAPE LIGHTING RENDERER
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────
 class LandscapeRenderer:
     def __init__(self, api_key: str):
         if not api_key:
@@ -379,7 +386,7 @@ class LandscapeRenderer:
                         "- Architectural style (colonial, contemporary, Tudor, farmhouse, etc.)\n"
                         "- Exterior materials and colors\n"
                         "- Key features: columns, dormers, windows, portico, garage, trees, driveway\n"
-                        "Be specific â this will be used to generate a landscape lighting rendering."
+                        "Be specific — this will be used to generate a landscape lighting rendering."
                     )}
                 ]}],
                 max_tokens=300
@@ -428,9 +435,9 @@ class LandscapeRenderer:
             return None
 
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-# LEAD GENERATOR â MAIN ORCHESTRATOR
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────
+# LEAD GENERATOR – MAIN ORCHESTRATOR
+# ─────────────────────────────────────────────────────────────────
 class LeadGenerator:
     def __init__(self):
         if not OPENAI_API_KEY:
@@ -445,7 +452,7 @@ class LeadGenerator:
             try:
                 with open(self.done_file) as f:
                     self.done = set(json.load(f))
-                log.info(f"Resuming â {len(self.done)} homes already done from prior runs")
+                log.info(f"Resuming – {len(self.done)} homes already done from prior runs")
             except Exception:
                 pass
 
@@ -486,21 +493,21 @@ class LeadGenerator:
             self.stats["skipped"] += 1
             return False
 
-        log.info(f"\n{'â'*60}")
-        log.info(f"ð  {address}")
-        log.info(f"ð° ${prop.get('price',0):,} | Sold: {prop.get('sold_date','Unknown')}")
+        log.info(f"\n{'─'*60}")
+        log.info(f"🏠 {address}")
+        log.info(f"💰 ${prop.get('price',0):,} | Sold: {prop.get('sold_date','Unknown')}")
 
         # Get photo
-        log.info("  ð¸ Fetching exterior photoâ¦")
+        log.info("  📸 Fetching exterior photo…")
         photo_url = prop.get("thumbnail","") or self.redfin.get_exterior_photo(prop.get("redfin_url",""))
         if not photo_url:
-            log.warning("  No exterior photo â skipping")
+            log.warning("  No exterior photo — skipping")
             self.stats["errors"] += 1
             return False
 
         img_bytes = self.redfin.download_image(photo_url)
         if not img_bytes:
-            log.warning("  Could not download photo â skipping")
+            log.warning("  Could not download photo — skipping")
             self.stats["errors"] += 1
             return False
 
@@ -509,7 +516,7 @@ class LeadGenerator:
             img = Image.open(BytesIO(img_bytes))
             w, h = img.size
             if w < 300 or h < 200:
-                log.warning(f"  Image too small ({w}Ã{h}) â skipping")
+                log.warning(f"  Image too small ({w}×{h}) — skipping")
                 self.stats["errors"] += 1
                 return False
             if img.format not in ("JPEG","JPG"):
@@ -522,24 +529,24 @@ class LeadGenerator:
             return False
 
         self.stats["photos"] += 1
-        log.info(f"  â Photo downloaded ({w}Ã{h} px)")
+        log.info(f"  ✓ Photo downloaded ({w}×{h} px)")
 
         # GPT-4o description
-        log.info("  ð¤ Analyzing architecture with GPT-4oâ¦")
+        log.info("  🤖 Analyzing architecture with GPT-4o…")
         description = self.renderer.describe_home(img_bytes)
-        log.info(f"  â {description[:100]}â¦")
+        log.info(f"  ✓ {description[:100]}…")
 
         # DALL-E 3 rendering
-        log.info("  ð¨ Generating landscape lighting rendering with DALL-E 3â¦")
+        log.info("  🎨 Generating landscape lighting rendering with DALL-E 3…")
         rendering = self.renderer.generate_rendering(description)
         if rendering:
             self.stats["renderings"] += 1
-            log.info("  â Rendering created!")
+            log.info("  ✅ Rendering created!")
         else:
-            log.warning("  â ï¸  Rendering failed â saving original only")
+            log.warning("  ⚠️  Rendering failed — saving original only")
 
         folder = self._save(address, img_bytes, rendering, prop)
-        log.info(f"  ð¾ Saved â {folder.name}/")
+        log.info(f"  💾 Saved → {folder.name}/")
         self._mark_done(address)
         return True
 
@@ -547,25 +554,25 @@ class LeadGenerator:
         all_props: List[Dict] = []
         seen: set = set()
 
-        log.info(f"\n{'â'*60}")
+        log.info(f"\n{'═'*60}")
         log.info("PHASE 1: SEARCHING FOR $1.3M+ SOLD HOMES")
-        log.info("Strategy: county-level search (fast) â per-town fallback")
-        log.info(f"{'â'*60}")
+        log.info("Strategy: county-level search (fast) → per-town fallback")
+        log.info(f"{'═'*60}")
 
-        # ââ Try county-level search first (2 API calls total) âââ
+        # ── Try county-level search first (2 API calls total) ───
         for county in REDFIN_COUNTIES:
             if len(all_props) >= MAX_TOTAL:
                 break
             name      = county["name"]
             region_id = county["region_id"]
 
-            log.info(f"\nð Searching {name}â¦")
+            log.info(f"\n🔍 Searching {name}")
 
             # Try to confirm/update region ID via autocomplete
             dynamic = self.redfin.get_region_id(name)
             if dynamic:
                 region_id, _ = dynamic
-                log.info(f"  â Region ID confirmed: {region_id}")
+                log.info(f"  ✓ Region ID confirmed: {region_id}")
             else:
                 log.info(f"  Using default region ID: {region_id}")
 
@@ -583,11 +590,11 @@ class LeadGenerator:
                     all_props.append(p)
                     self.stats["found"] += 1
                     added += 1
-            log.info(f"  â Added {added} homes from {name}")
+            log.info(f"  → Added {added} homes from {name}")
 
-        # ââ Fall back to per-town if county search returned nothing ââ
+        # ── Fall back to per-town if county search returned nothing ──
         if not all_props:
-            log.warning("\nâ ï¸  County search returned 0 results â falling back to per-town search")
+            log.warning("\n⚠️  County search returned 0 results — falling back to per-town search")
             all_areas = (
                 [(t, "Northern Nassau") for t in NORTHERN_NASSAU] +
                 [(t, "Suffolk County")  for t in SUFFOLK_TOWNS]
@@ -607,7 +614,7 @@ class LeadGenerator:
                 if added:
                     log.info(f"  [{region}] {town}: {added} homes added")
 
-        log.info(f"\n{'â'*60}")
+        log.info(f"\n{'─'*60}")
         log.info(f"Total qualifying homes found: {len(all_props)}")
 
         # Save lead list
@@ -619,36 +626,53 @@ class LeadGenerator:
 
     def run(self):
         start = datetime.now()
-        log.info(f"\n{'â'*60}")
+        log.info(f"\n{'═'*60}")
         log.info("  LUXURY HOME LANDSCAPE LIGHTING LEAD GENERATOR v2.0")
         log.info(f"  Min price: ${MIN_SALE_PRICE:,}  |  Max age: {MAX_AGE_DAYS} days")
         log.info(f"  Max homes: {MAX_TOTAL}  |  Output: {OUTPUT_DIR}")
-        log.info(f"{'â'*60}")
+        log.info(f"{'═'*60}")
 
         properties = self.collect_properties()
 
         if not properties:
             log.warning(
-                "\nâ No qualifying homes found.\n"
+                "\n❌ No qualifying homes found.\n"
                 "Redfin may be temporarily blocking requests.\n"
-                "Please wait 5â10 minutes and try again."
+                "Please wait 5–10 minutes and try again."
             )
             return
 
-        log.info(f"\n{'â'*60}")
+        log.info(f"\n{'═'*60}")
         log.info(f"PHASE 2: PROCESSING {len(properties)} HOMES")
-        log.info(f"Estimated time: {len(properties) * 45 // 60}â{len(properties) * 90 // 60} minutes")
-        log.info(f"{'â'*60}")
+        log.info(f"Estimated time: {len(properties) * 45 // 60}–{len(properties) * 90 // 60} minutes")
+        log.info(f"{'═'*60}")
 
         for i, prop in enumerate(properties, 1):
             log.info(f"\n[{i}/{len(properties)}]")
             try:
                 self.process_home(prop)
             except KeyboardInterrupt:
-                log.info("\nâ¹ Stopped by user")
+                log.info("\n⏹ Stopped by user")
                 break
             except Exception as e:
                 log.error(f"Error: {e}")
                 log.debug(traceback.format_exc())
                 self.stats["errors"] += 1
-            if sel
+            if self.stats["renderings"] + self.stats["errors"] >= MAX_TOTAL:
+                break
+
+        elapsed = datetime.now() - start
+        log.info(f"\n{'═'*60}")
+        log.info("  RUN COMPLETE")
+        log.info(f"  Time:       {str(elapsed).split('.')[0]}")
+        log.info(f"  Found:      {self.stats['found']}")
+        log.info(f"  Photos:     {self.stats['photos']}")
+        log.info(f"  Renderings: {self.stats['renderings']}")
+        log.info(f"  Errors:     {self.stats['errors']}")
+        log.info(f"  Output:     {OUTPUT_DIR}")
+        log.info(f"{'═'*60}\n")
+
+
+# ─────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    LeadGenerator().run()
