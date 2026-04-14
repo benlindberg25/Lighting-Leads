@@ -491,8 +491,9 @@ class LeadGenerator:
     def _save(self, address: str, orig: bytes, rendering: Optional[bytes], meta: Dict):
         folder = OUTPUT_DIR / self._safe_name(address)
         folder.mkdir(parents=True, exist_ok=True)
-        with open(folder / "original.jpg", "wb") as f:
-            f.write(orig)
+        if orig:
+            with open(folder / "original.jpg", "wb") as f:
+                f.write(orig)
         if rendering:
             with open(folder / "with_landscape_lighting.jpg", "wb") as f:
                 f.write(rendering)
@@ -531,53 +532,63 @@ class LeadGenerator:
         if not photo_url:
             log.info("  🔍 Redfin photo unavailable — trying Bing image search…")
             photo_url = self.redfin.search_bing_image(address)
-        if not photo_url:
-            log.warning("  No exterior photo found — skipping")
-            self.stats["errors"] += 1
-            return False
+        img_bytes = None
+        if photo_url:
+            img_bytes = self.redfin.download_image(photo_url)
+            if img_bytes:
+                # Validate image
+                try:
+                    img = Image.open(BytesIO(img_bytes))
+                    w, h = img.size
+                    if w < 300 or h < 200:
+                        log.warning(f"  Image too small ({w}×{h}) — rendering without photo")
+                        img_bytes = None
+                    elif img.format not in ("JPEG","JPG"):
+                        buf = BytesIO()
+                        img.convert("RGB").save(buf, format="JPEG", quality=90)
+                        img_bytes = buf.getvalue()
+                except Exception as e:
+                    log.warning(f"  Invalid image: {e} — rendering without photo")
+                    img_bytes = None
+            else:
+                log.warning("  Could not download photo — rendering without photo")
 
-        img_bytes = self.redfin.download_image(photo_url)
-        if not img_bytes:
-            log.warning("  Could not download photo — skipping")
-            self.stats["errors"] += 1
-            return False
-
-        # Validate image
-        try:
-            img = Image.open(BytesIO(img_bytes))
-            w, h = img.size
-            if w < 300 or h < 200:
-                log.warning(f"  Image too small ({w}×{h}) — skipping")
-                self.stats["errors"] += 1
-                return False
-            if img.format not in ("JPEG","JPG"):
-                buf = BytesIO()
-                img.convert("RGB").save(buf, format="JPEG", quality=90)
-                img_bytes = buf.getvalue()
-        except Exception as e:
-            log.warning(f"  Invalid image: {e}")
-            self.stats["errors"] += 1
-            return False
-
-        self.stats["photos"] += 1
-        log.info(f"  ✓ Photo downloaded ({w}×{h} px)")
-
-        # GPT-4o description
-        log.info("  🤖 Analyzing architecture with GPT-4o…")
-        description = self.renderer.describe_home(img_bytes)
-        log.info(f"  ✓ {description[:100]}…")
+        # Build description — from photo (GPT-4o) or from property data
+        if img_bytes:
+            self.stats["photos"] += 1
+            log.info(f"  ✓ Photo downloaded")
+            log.info("  U0001f9ec Analyzing architecture with GPT-4o…")
+            description = self.renderer.describe_home(img_bytes)
+            log.info(f"  ✓ {description[:100]}…")
+        else:
+            log.info("  U0001f4dd No photo — building description from property data…")
+            price = prop.get('price', 0)
+            beds  = prop.get('beds', '')
+            sqft  = prop.get('sqft', '')
+            style = "grand estate" if price > 4000000 else "luxury"
+            bed_str  = f"{beds}-bedroom, " if beds else ""
+            sqft_str = f"{sqft} sq ft " if sqft else ""
+            description = (
+                f"A {style} single-family home in Long Island, NY. "
+                f"{bed_str}{sqft_str}property with professional landscaping, "
+                f"manicured hedges, mature trees, a wide paved driveway, "
+                f"and elegant architectural details typical of high-end Nassau/Suffolk County homes."
+            )
+            log.info(f"  ✓ Description: {description[:100]}…")
 
         # DALL-E 3 rendering
-        log.info("  🎨 Generating landscape lighting rendering with DALL-E 3…")
+        log.info("  U0001f3a8 Generating landscape lighting rendering with DALL-E 3…")
         rendering = self.renderer.generate_rendering(description)
         if rendering:
             self.stats["renderings"] += 1
             log.info("  ✅ Rendering created!")
         else:
-            log.warning("  ⚠️  Rendering failed — saving original only")
+            log.warning("  ⚠️  Rendering failed")
+            self.stats["errors"] += 1
+            return False
 
-        folder = self._save(address, img_bytes, rendering, prop)
-        log.info(f"  💾 Saved → {folder.name}/")
+        folder = self._save(address, img_bytes or b"", rendering, prop)
+        log.info(f"  U0001f4be Saved → {folder.name}/")
         self._mark_done(address)
         return True
 
