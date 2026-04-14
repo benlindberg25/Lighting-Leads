@@ -364,6 +364,34 @@ class RedfinScraper:
             log.warning(f"  Image download failed: {e}")
             return None
 
+    def search_bing_image(self, address: str) -> Optional[str]:
+        """Search Bing Images for an exterior photo of the property."""
+        query = f"{address} exterior house front"
+        url = "https://www.bing.com/images/search"
+        params = {"q": query, "form": "HDRSC2", "first": 1, "tsc": "ImageHoverTitle"}
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Referer": "https://www.bing.com/",
+        }
+        try:
+            time.sleep(1)
+            r = requests.get(url, params=params, headers=headers, timeout=15)
+            if r.status_code != 200:
+                log.debug(f"  Bing image search HTTP {r.status_code}")
+                return None
+            # Bing embeds full image URLs as murl in JSON blobs
+            matches = re.findall(r'"murl":"(https://[^"]+\.(?:jpg|jpeg|png)(?:[^"]{0,50})?)"', r.text)
+            if matches:
+                log.info(f"  🔍 Bing image found: {matches[0][:80]}")
+                return matches[0]
+            log.debug("  Bing: no murl matches found")
+        except Exception as e:
+            log.debug(f"  Bing image search error: {e}")
+        return None
+
+
 
 # ─────────────────────────────────────────────────────────────────
 # AI LANDSCAPE LIGHTING RENDERER
@@ -501,7 +529,10 @@ class LeadGenerator:
         log.info("  📸 Fetching exterior photo…")
         photo_url = prop.get("thumbnail","") or self.redfin.get_exterior_photo(prop.get("redfin_url",""))
         if not photo_url:
-            log.warning("  No exterior photo — skipping")
+            log.info("  🔍 Redfin photo unavailable — trying Bing image search…")
+            photo_url = self.redfin.search_bing_image(address)
+        if not photo_url:
+            log.warning("  No exterior photo found — skipping")
             self.stats["errors"] += 1
             return False
 
