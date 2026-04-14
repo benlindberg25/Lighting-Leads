@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-â  Landscape Lighting Lead Generator  â  Web Dashboard    â
-â  Built with Streamlit â¢ Deploy free at streamlit.io     â
-ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+╔══════════════════════════════════════════════════════════╗
+║  Landscape Lighting Lead Generator  ║  Web Dashboard    ║
+║  Built with Streamlit • Deploy free at streamlit.io     ║
+╚══════════════════════════════════════════════════════════╝
 """
 import os
 import sys
@@ -19,37 +19,90 @@ from io import BytesIO
 import streamlit as st
 from PIL import Image
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────────────────
 # PAGE CONFIGURATION
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Landscape Lighting Leads",
-    page_icon="ð¡",
+    page_icon="💡",
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
-        "About": "Luxury Home Landscape Lighting Lead Generator â finds recently sold $1.3M+ homes and creates AI lighting renderings."
+        "About": "Luxury Home Landscape Lighting Lead Generator — finds recently sold $1.3M+ homes and creates AI lighting renderings."
     }
 )
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────────────────
 # CUSTOM CSS (dark professional theme with warm gold accents)
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-/* ââ Base & Background âââââââââââââââââââââââââââââââââ */
+/* ── Base & Background ───────────────────────────────── */
 .stApp {
     background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
     color: #e6edf3;
 }
-/* ââ Sidebar âââââââââââââââââââââââââââââââââââââââââââ */
+/* ── Sidebar ─────────────────────────────────────────── */
 [data-testid="stSidebar"] {
     background: linear-gradient(180deg, #1a1f2e 0%, #141820 100%);
     border-right: 1px solid #2a3040;
 }
 [data-testid="stSidebar"] .stMarkdown h1,
 [data-testid="stSidebar"] .stMarkdown h2,
-ding: 14px 18px;
+[data-testid="stSidebar"] .stMarkdown h3 {
+    color: #f0b429;
+}
+/* ── Buttons ─────────────────────────────────────────── */
+.stButton > button {
+    background: linear-gradient(135deg, #c8922a 0%, #f0b429 100%);
+    color: #0d1117;
+    font-weight: 700;
+    font-size: 15px;
+    border: none;
+    border-radius: 8px;
+    padding: 0.6rem 1.5rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 15px rgba(240, 180, 41, 0.25);
+}
+.stButton > button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(240, 180, 41, 0.40);
+    color: #0d1117;
+}
+/* ── Metric Cards ──────────────────────────────────────── */
+[data-testid="metric-container"] {
+    background: #1c2132;
+    border: 1px solid #2a3040;
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+[data-testid="metric-container"] [data-testid="stMetricValue"] {
+    color: #f0b429;
+    font-size: 2rem !important;
+    font-weight: 700;
+}
+[data-testid="metric-container"] [data-testid="stMetricLabel"] {
+    color: #8b949e;
+}
+/* ── Property Cards ──────────────────────────────────── */
+.property-card {
+    background: #1c2132;
+    border: 1px solid #2a3040;
+    border-radius: 12px;
+    padding: 0;
+    margin-bottom: 24px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    transition: box-shadow 0.2s ease;
+}
+.property-card:hover {
+    box-shadow: 0 8px 30px rgba(240, 180, 41, 0.15);
+    border-color: #f0b429;
+}
+.property-card-header {
+    background: linear-gradient(135deg, #1a2035 0%, #1c2132 100%);
+    padding: 14px 18px;
     border-bottom: 1px solid #2a3040;
 }
 .property-address {
@@ -75,7 +128,7 @@ ding: 14px 18px;
     font-size: 13px;
     font-weight: 600;
 }
-/* ââ Photo Labels ââââââââââââââââââââââââââââââââââââââââ */
+/* ── Photo Labels ──────────────────────────────────────── */
 .photo-label {
     text-align: center;
     font-size: 12px;
@@ -86,7 +139,7 @@ ding: 14px 18px;
 }
 .label-before { color: #8b949e; }
 .label-after  { color: #f0b429; }
-/* ââ Section Headers âââââââââââââââââââââââââââââââââââ */
+/* ── Section Headers ─────────────────────────────────── */
 .section-title {
     font-size: 22px;
     font-weight: 700;
@@ -95,7 +148,7 @@ ding: 14px 18px;
     padding-left: 12px;
     margin: 8px 0 20px 0;
 }
-/* ââ Log output ââââââââââââââââââââââââââââââââââââââââ */
+/* ── Log output ──────────────────────────────────────── */
 .stCode, code, pre {
     background: #0d1117 !important;
     border: 1px solid #2a3040 !important;
@@ -103,7 +156,7 @@ ding: 14px 18px;
     color: #7ee787 !important;
     font-size: 12px !important;
 }
-/* ââ Inputs & Sliders ââââââââââââââââââââââââââââââââââ */
+/* ── Inputs & Sliders ────────────────────────────────── */
 .stNumberInput input, .stTextInput input {
     background: #1c2132 !important;
     border: 1px solid #2a3040 !important;
@@ -111,7 +164,7 @@ ding: 14px 18px;
     border-radius: 8px !important;
 }
 .stSlider [data-testid="stThumbValue"] { color: #f0b429 !important; }
-/* ââ Tabs ââââââââââââââââââââââââââââââââââââââââââââââââ */
+/* ── Tabs ──────────────────────────────────────────────── */
 .stTabs [data-baseweb="tab-list"] {
     gap: 8px;
     border-bottom: 1px solid #2a3040;
@@ -127,9 +180,9 @@ ding: 14px 18px;
     color: #f0b429 !important;
     border-bottom: 2px solid #f0b429 !important;
 }
-/* ââ Dividers âââââââââââââââââââââââââââââââââââââââââ */
+/* ── Dividers ────────────────────────────────────────── */
 hr { border-color: #2a3040; }
-/* ââ Alert/Info boxes ââââââââââââââââââââââââââââââââââ */
+/* ── Alert/Info boxes ────────────────────────────────── */
 .stAlert {
     background: #1c2132 !important;
     border: 1px solid #2a3040 !important;
@@ -138,9 +191,9 @@ hr { border-color: #2a3040; }
 </style>
 """, unsafe_allow_html=True)
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────────────────
 # CONSTANTS & PATHS
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────────────────
 SCRIPT_DIR   = Path(__file__).parent
 LEADS_DIR    = SCRIPT_DIR / "leads_output"
 AGENT_SCRIPT = SCRIPT_DIR / "landscape_leads.py"
@@ -148,17 +201,17 @@ MANIFEST     = LEADS_DIR / "all_leads.json"
 DONE_FILE    = LEADS_DIR / ".completed_addresses.json"
 LEADS_DIR.mkdir(parents=True, exist_ok=True)
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────────────────
 # THREAD-SAFE COMMUNICATION
 # Background thread writes to these; main thread reads them on each rerun.
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────────────────
 _output_queue: queue.Queue = queue.Queue()
 _process_ref: list = [None]           # _process_ref[0] holds the Popen object
 _SENTINEL = "__AGENT_DONE__"          # signals thread finished
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────────────────
 # SESSION STATE INITIALIZATION
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────────────────
 defaults = {
     "running":      False,
     "run_logs":     [],
@@ -169,9 +222,9 @@ for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────────────────
 # DRAIN QUEUE  (runs every Streamlit rerun while agent is active)
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────────────────
 while not _output_queue.empty():
     try:
         item = _output_queue.get_nowait()
@@ -184,9 +237,9 @@ while not _output_queue.empty():
     except queue.Empty:
         break
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────────────────
 # HELPER FUNCTIONS
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────────────────
 def get_api_key() -> str:
     """Get OpenAI API key from Streamlit secrets or environment."""
     try:
@@ -246,7 +299,7 @@ def format_price(price_str: str) -> str:
 def run_agent(api_key: str, min_price: int, max_age_days: int, max_total: int):
     """
     Run landscape_leads.py as a subprocess and push output to _output_queue.
-    Runs in a background thread â NEVER touches st.session_state directly.
+    Runs in a background thread — NEVER touches st.session_state directly.
     """
     env = os.environ.copy()
     env["OPENAI_API_KEY"]    = api_key
@@ -277,11 +330,12 @@ def run_agent(api_key: str, min_price: int, max_age_days: int, max_total: int):
         _output_queue.put(f"ERROR: {e}")
     finally:
         _output_queue.put(_SENTINEL)   # always signal completion
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+
+# ─────────────────────────────────────────────────────────────────────────────
 # SIDEBAR
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## ð¡ Landscape Lighting\n### Lead Generator")
+    st.markdown("## 💡 Landscape Lighting\n### Lead Generator")
     st.markdown("---")
 
     # API Key
@@ -295,7 +349,7 @@ with st.sidebar:
         help="Get your key at platform.openai.com/api-keys"
     )
     if not api_key_input:
-        st.warning("â ï¸ API key required to run")
+        st.warning("⚠️ API key required to run")
 
     st.markdown("---")
     st.markdown("**Search Settings**")
@@ -331,7 +385,7 @@ with st.sidebar:
     # Run / Stop buttons
     if not st.session_state.running:
         run_clicked = st.button(
-            "ð Run Agent",
+            "🚀 Run Agent",
             use_container_width=True,
             disabled=not api_key_input,
         )
@@ -343,7 +397,7 @@ with st.sidebar:
             else:
                 st.session_state.running      = True
                 st.session_state.run_complete = False
-                st.session_state.run_logs     = ["ð  Starting agentâ¦"]
+                st.session_state.run_logs     = ["🚀 Starting agent…"]
                 thread = threading.Thread(
                     target=run_agent,
                     args=(api_key_input, min_price, max_age_days, max_total),
@@ -357,8 +411,8 @@ with st.sidebar:
             if proc:
                 proc.terminate()
 
-        st.button("â¹ Stop", use_container_width=True, type="secondary", on_click=_stop)
-        st.info("Agent is runningâ¦")
+        st.button("⏹ Stop", use_container_width=True, type="secondary", on_click=_stop)
+        st.info("Agent is running…")
 
     # Stats summary
     st.markdown("---")
@@ -373,13 +427,13 @@ with st.sidebar:
             unsafe_allow_html=True
         )
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────────────────
 # MAIN CONTENT
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <div style='padding: 8px 0 24px 0;'>
   <h1 style='font-size:32px; font-weight:800; color:#e6edf3; margin:0;'>
-    ð¡ Landscape Lighting Lead Generator
+    💡 Landscape Lighting Lead Generator
   </h1>
   <p style='color:#8b949e; font-size:15px; margin:6px 0 0 0;'>
     Northern Nassau County &amp; Suffolk County, NY &mdash; Homes sold $1.3M+ in the last 2 years
@@ -388,27 +442,27 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 tab_gallery, tab_progress, tab_leads = st.tabs([
-    "ð¸ Before / After Gallery",
-    "âï¸ Run Progress",
-    "ð All Leads",
+    "📸 Before / After Gallery",
+    "⚙️ Run Progress",
+    "📋 All Leads",
 ])
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-# TAB 1 â GALLERY
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB 1 – GALLERY
+# ─────────────────────────────────────────────────────────────────────────────
 with tab_gallery:
     folders = get_result_folders()
     if not folders:
         st.markdown("""
         <div style='text-align:center; padding:60px 0;'>
-            <div style='font-size:48px; margin-bottom:16px;'>ð¡</div>
+            <div style='font-size:48px; margin-bottom:16px;'>💡</div>
             <h3 style='color:#8b949e;'>No results yet</h3>
             <p style='color:#4a5568;'>Click <strong style='color:#f0b429;'>Run Agent</strong> in the sidebar to start finding homes and generating renderings.</p>
         </div>
         """, unsafe_allow_html=True)
     else:
-        with st.expander("ð FIlter results", expanded=False):
-            search_text = st.text_input("Search by address", placeholder="e.g. Huntington, East Hamptonâ¦")
+        with st.expander("🔍 Filter results", expanded=False):
+            search_text = st.text_input("Search by address", placeholder="e.g. Huntington, East Hampton…")
             show_only_rendered = st.checkbox("Show only homes with AI renderings", value=False)
 
         filtered = folders
@@ -433,14 +487,14 @@ with tab_gallery:
             sqft        = info.get("Sq Ft",     "")
 
             meta_parts = []
-            if beds  and beds  != "NA": meta_parts.append(f"ð {beds} bd")
-            if baths and baths != "NA": meta_parts.append(f"ð¿ {baths} ba")
-            if sqft  and sqft  != "NA": meta_parts.append(f"ð {sqft} sq ft")
-            if sold_date:               meta_parts.append(f"ð Sold {sold_date}")
-            meta_html  = " Â· ".join(meta_parts)
+            if beds  and beds  != "NA": meta_parts.append(f"🛏 {beds} bd")
+            if baths and baths != "NA": meta_parts.append(f"🚿 {baths} ba")
+            if sqft  and sqft  != "NA": meta_parts.append(f"📐 {sqft} sq ft")
+            if sold_date:               meta_parts.append(f"📅 Sold {sold_date}")
+            meta_html  = " · ".join(meta_parts)
 
             listing_link = (
-                f"<a href='{redfin_url}' target='_blank' style='color:#f0b429; font-size:12px;'>View listing â</a>"
+                f"<a href='{redfin_url}' target='_blank' style='color:#f0b429; font-size:12px;'>View listing →</a>"
                 if redfin_url and redfin_url != "N/A" else ""
             )
 
@@ -453,7 +507,7 @@ with tab_gallery:
                 </div>
                 <div class='property-meta'>
                   {meta_html}
-                  {("Â· " + listing_link) if listing_link else ""}
+                  {("· " + listing_link) if listing_link else ""}
                 </div>
               </div>
             </div>
@@ -464,43 +518,43 @@ with tab_gallery:
             col1, col2  = st.columns(2)
 
             with col1:
-                st.markdown("<p class='photo-label label-before'>ð· Original Photo</p>", unsafe_allow_html=True)
+                st.markdown("<p class='photo-label label-before'>📷 Original Photo</p>", unsafe_allow_html=True)
                 if orig_path.exists():
                     st.image(str(orig_path), use_container_width=True)
                 else:
                     st.markdown("<div style='background:#1c2132; height:200px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#4a5568;'>No photo</div>", unsafe_allow_html=True)
 
             with col2:
-                st.markdown("<p class='photo-label label-after'>ð¡ With Landscape Lighting (AI)</p>", unsafe_allow_html=True)
+                st.markdown("<p class='photo-label label-after'>💡 With Landscape Lighting (AI)</p>", unsafe_allow_html=True)
                 if render_path.exists():
                     st.image(str(render_path), use_container_width=True)
                 else:
-                    st.markdown("<div style='background:#1c2132; height:200px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#4a5568; border: 1px dashed #2a3040;'>â³ Rendering pending</div>", unsafe_allow_html=True)
+                    st.markdown("<div style='background:#1c2132; height:200px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#4a5568; border: 1px dashed #2a3040;'>⏳ Rendering pending</div>", unsafe_allow_html=True)
 
             dl_col1, dl_col2, _ = st.columns([1, 1, 3])
             if orig_path.exists():
                 with open(orig_path, "rb") as f:
-                    dl_col1.download_button("â¬ Original", data=f.read(),
-                        file_name=f"{address}_original.jpg", mime="image/jpeg",
+                    dl_col1.download_button("⬇ Original", data=f.read(),
+                        file_name=f"{folder.name}_original.jpg", mime="image/jpeg",
                         key=f"dl_orig_{folder.name}")
             if render_path.exists():
                 with open(render_path, "rb") as f:
-                    dl_col2.download_button("â¬ Rendering", data=f.read(),
-                        file_name=f"{address}_landscape_lighting.jpg", mime="image/jpeg",
+                    dl_col2.download_button("⬇ Rendering", data=f.read(),
+                        file_name=f"{folder.name}_landscape_lighting.jpg", mime="image/jpeg",
                         key=f"dl_render_{folder.name}")
 
             st.markdown("<hr style='margin: 8px 0 20px 0; border-color:#2a3040;'>", unsafe_allow_html=True)
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-# TAB 2 â RUN PROGRESS
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB 2 – RUN PROGRESS
+# ─────────────────────────────────────────────────────────────────────────────
 with tab_progress:
     if st.session_state.running:
         st.markdown(
             "<div style='display:flex; align-items:center; gap:10px; margin-bottom:16px;'>"
             "<div style='width:12px; height:12px; background:#f0b429; border-radius:50%; "
             "animation:pulse 1.5s infinite;'></div>"
-            "<span style='color:#f0b429; font-weight:600;'>Agent is runningâ¦</span></div>"
+            "<span style='color:#f0b429; font-weight:600;'>Agent is running…</span></div>"
             "<style>@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }</style>",
             unsafe_allow_html=True
         )
@@ -508,11 +562,11 @@ with tab_progress:
         time.sleep(2)
         st.rerun()
     elif st.session_state.run_complete:
-        st.success("â Agent run complete!")
+        st.success("✅ Agent run complete!")
     elif not st.session_state.run_logs:
         st.markdown("""
         <div style='text-align:center; padding:60px 0;'>
-            <div style='font-size:48px; margin-bottom:16px;'>âï¸</div>
+            <div style='font-size:48px; margin-bottom:16px;'>⚙️</div>
             <h3 style='color:#8b949e;'>No runs yet</h3>
             <p style='color:#4a5568;'>Click <strong style='color:#f0b429;'>Run Agent</strong> in the sidebar to start.</p>
         </div>
@@ -521,7 +575,7 @@ with tab_progress:
     if st.session_state.run_logs:
         log_text = "\n".join(st.session_state.run_logs[-200:])
         st.code(log_text, language=None)
-        if st.button("ð Clear Log"):
+        if st.button("🗑 Clear Log"):
             st.session_state.run_logs = []
             st.rerun()
 
@@ -532,15 +586,15 @@ with tab_progress:
         selected_log = st.selectbox("Select a log file", options=log_files,
             format_func=lambda p: p.name, label_visibility="collapsed")
         if selected_log:
-            with st.expander(f"ð {selected_log.name}", expanded=False):
+            with st.expander(f"📄 {selected_log.name}", expanded=False):
                 try:
                     st.code(selected_log.read_text()[-5000:], language=None)
                 except Exception:
                     st.warning("Could not read log file")
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-# TAB 3 â ALL LEADS TABLE
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB 3 – ALL LEADS TABLE
+# ─────────────────────────────────────────────────────────────────────────────
 with tab_leads:
     leads   = load_leads()
     folders = get_result_folders()
@@ -569,12 +623,12 @@ with tab_leads:
                 "Beds":       lead.get("beds",  ""),
                 "Baths":      lead.get("baths", ""),
                 "Sq Ft":      lead.get("sqft",  ""),
-                "Photo":      "â" if has_photo     else "â³",
-                "Rendering":  "â" if has_rendering else "â³",
+                "Photo":      "✅" if has_photo     else "⏳",
+                "Rendering":  "✅" if has_rendering else "⏳",
             })
         df = pd.DataFrame(rows)
 
-        price_filter = st.text_input("Filter by address or area", placeholder="e.g. Huntingtonâ¦")
+        price_filter = st.text_input("Filter by address or area", placeholder="e.g. Huntington…")
         if price_filter:
             df = df[df["Address"].str.contains(price_filter, case=False)]
 
@@ -582,19 +636,19 @@ with tab_leads:
 
         csv = df.to_csv(index=False)
         st.download_button(
-            "â¬ Download as CSV",
+            "⬇ Download as CSV",
             data=csv,
             file_name=f"landscape_leads_{datetime.now().strftime('%Y%m%d')}.csv",
             mime="text/csv",
         )
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────────────────
 # FOOTER
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ─────────────────────────────────────────────────────────────────────────────
 st.markdown("---")
 st.markdown(
     "<p style='text-align:center; color:#4a5568; font-size:12px;'>"
-    "ð¡ Landscape Lighting Lead Generator &bull; "
+    "💡 Landscape Lighting Lead Generator &bull; "
     "Northern Nassau &amp; Suffolk County, NY &bull; "
     "Powered by Redfin, OpenAI GPT-4o &amp; DALL-E 3"
     "</p>",
