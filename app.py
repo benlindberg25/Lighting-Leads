@@ -383,13 +383,13 @@ with st.sidebar:
     st.markdown("---")
 
     # Clear cache option
-    done_file = OUTPUT_DIR / ".completed_addresses.json"
+    done_file = LEADS_DIR / ".completed_addresses.json"
     if not st.session_state.running and done_file.exists():
         if st.button("🗑️ Clear cache (re-run all homes)", use_container_width=True):
             done_file.unlink(missing_ok=True)
-            leads_file = OUTPUT_DIR / "all_leads.json"
+            leads_file = LEADS_DIR / "all_leads.json"
             leads_file.unlink(missing_ok=True)
-            for folder in OUTPUT_DIR.iterdir():
+            for folder in LEADS_DIR.iterdir():
                 if folder.is_dir() and not folder.name.startswith("."):
                     import shutil
                     shutil.rmtree(folder, ignore_errors=True)
