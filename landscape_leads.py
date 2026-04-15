@@ -396,6 +396,61 @@ class RedfinScraper:
 # ─────────────────────────────────────────────────────────────────
 # AI LANDSCAPE LIGHTING RENDERER
 # ─────────────────────────────────────────────────────────────────
+    def search_realtor_photo(self, address: str) -> Optional[str]:
+        """Search Realtor.com for an exterior photo by address."""
+        # Use street address only for search query
+        street = address.split(',')[0].strip()
+        url = "https://www.realtor.com/api/v1/rdc_search_srp?client_id=rdc-search-for-sale-search&schema=vesta"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Origin": "https://www.realtor.com",
+            "Referer": "https://www.realtor.com/",
+        }
+        body = {
+            "query": """
+            query ConsumerSearchQuery($query: SearchQuery!, $limit: Int) {
+              home_search(query: $query, limit: $limit) {
+                results { photos { href } primary_photo { href } }
+              }
+            }""",
+            "variables": {
+                "query": {"search_location": {"location": address}},
+                "limit": 3
+            }
+        }
+        try:
+            time.sleep(1)
+            r = requests.post(url, json=body, headers=headers, timeout=15)
+            if r.status_code == 200:
+                data = r.json()
+                results = data.get('data', {}).get('home_search', {}).get('results', [])
+                for res in results:
+                    # Try primary_photo first
+                    primary = res.get('primary_photo', {}) or {}
+                    href = primary.get('href', '')
+                    if href:
+                        log.info(f"  U0001f3e0 Realtor.com photo found")
+                        return href
+                    # Try photos array
+                    photos = res.get('photos', []) or []
+                    if photos and photos[0].get('href'):
+                        log.info(f"  U0001f3e0 Realtor.com photo found")
+                        return photos[0]['href']
+            # Fallback: scrape the search results page
+            search_url = f"https://www.realtor.com/realestateandhomes-search/{address.replace(' ', '-').replace(',', '')}"
+            r2 = self._get(search_url)
+            if r2:
+                matches = re.findall(r'"primary_photo"\s*:\s*\{[^}]*"href"\s*:\s*"(https://ap\.rdcpix\.com/[^"]+)"', r2.text)
+                if matches:
+                    log.info(f"  U0001f3e0 Realtor.com photo found via page scrape")
+                    return matches[0]
+        except Exception as e:
+            log.debug(f"  Realtor.com photo error: {e}")
+        return None
+
+
 class LandscapeRenderer:
     def __init__(self, api_key: str):
         if not api_key:
@@ -532,6 +587,9 @@ class LeadGenerator:
         if not photo_url:
             log.info("  🔍 Redfin photo unavailable — trying Bing image search…")
             photo_url = self.redfin.search_bing_image(address)
+        if not photo_url:
+            log.info("  🏠 Trying Realtor.com…")
+            photo_url = self.redfin.search_realtor_photo(address)
         img_bytes = None
         if photo_url:
             img_bytes = self.redfin.download_image(photo_url)
