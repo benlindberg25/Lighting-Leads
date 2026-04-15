@@ -303,6 +303,7 @@ def run_agent(api_key: str, min_price: int, max_age_days: int, max_total: int):
     """
     env = os.environ.copy()
     env["OPENAI_API_KEY"]    = api_key
+    env["STREET_VIEW_KEY"]   = street_view_key_input
     env["PYTHONUNBUFFERED"]  = "1"
 
     cmd = [
@@ -347,6 +348,17 @@ with st.sidebar:
         placeholder="sk-...",
         label_visibility="collapsed",
         help="Get your key at platform.openai.com/api-keys"
+    )
+
+    st.markdown("---")
+    st.markdown("**Google Street View API Key** *(optional)*")
+    street_view_key_input = st.text_input(
+        "Street View API Key",
+        value=os.environ.get("STREET_VIEW_KEY", ""),
+        type="password",
+        placeholder="AIza...",
+        label_visibility="collapsed",
+        help="Enables real home photos. Get a free key at console.cloud.google.com"
     )
     if not api_key_input:
         st.warning("⚠️ API key required to run")
