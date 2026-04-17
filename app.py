@@ -205,7 +205,7 @@ LEADS_DIR.mkdir(parents=True, exist_ok=True)
 # THREAD-SAFE COMMUNICATION
 # Background thread writes to these; main thread reads them on each rerun.
 # âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-_output_queue: queue.Queue = queue.Queue()
+_output_queue: queue.Queue = queue.Queue() if "_output_queue" not in globals() else _output_queue
 _process_ref: list = [None]           # _process_ref[0] holds the Popen object
 _SENTINEL = "__AGENT_DONE__"          # signals thread finished
 
@@ -305,7 +305,7 @@ def run_agent(api_key: str, min_price: int, max_age_days: int, max_total: int):
     """
     env = os.environ.copy()
     env["OPENAI_API_KEY"]    = api_key
-    env["STREET_VIEW_KEY"]   = street_view_key_input
+    env["STREET_VIEW_KEY"]   = globals().get("street_view_key_input", "")
     env["PYTHONUNBUFFERED"]  = "1"
 
     cmd = [
