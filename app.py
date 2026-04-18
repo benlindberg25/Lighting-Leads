@@ -207,10 +207,10 @@ LEADS_DIR.mkdir(parents=True, exist_ok=True)
 # âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 if not hasattr(sys, '_landscape_agent_queue'):
         sys._landscape_agent_queue = queue.Queue()
-        _output_queue: queue.Queue = sys._landscape_agent_queue
+_output_queue = sys._landscape_agent_queue
 if not hasattr(sys, '_landscape_agent_proc_ref'):
         sys._landscape_agent_proc_ref = [None]
-        _process_ref: list = sys._landscape_agent_proc_ref  # _process_ref[0] holds the Popen objec
+_process_ref = sys._landscape_agent_proc_ref
 _SENTINEL = "__AGENT_DONE__"          # signals thread finished
 
 # âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
