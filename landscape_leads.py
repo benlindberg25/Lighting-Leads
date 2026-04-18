@@ -16,6 +16,7 @@ Setup:
   pip install requests beautifulsoup4 lxml openai Pillow
   export OPENAI_API_KEY="sk-..."
 """
+import sys as _sys; print("DIAG:0 script_start", flush=True, file=_sys.stdout)
 import argparse, os, re, sys, json, time, base64, logging, traceback, csv, io
 import requests
 from io import BytesIO
@@ -25,7 +26,7 @@ from typing import Optional, List, Dict, Tuple
 from bs4 import BeautifulSoup
 from PIL import Image
 import openai
-
+print("DIAG:1 imports_done", flush=True, file=_sys.stdout)
 # ─────────────────────────────────────────────────────────────────
 # CLI ARGUMENTS
 # ─────────────────────────────────────────────────────────────────
@@ -40,7 +41,7 @@ def parse_args():
     return p.parse_args()
 
 args = parse_args()
-
+print("DIAG:2 args_parsed", flush=True, file=_sys.stdout)
 OPENAI_API_KEY  = os.environ.get("OPENAI_API_KEY", "")
 MIN_SALE_PRICE  = args.min_price
 MAX_AGE_DAYS    = args.max_age

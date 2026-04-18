@@ -581,13 +581,12 @@ with tab_progress:
         st.markdown(
             "<div style='display:flex; align-items:center; gap:10px; margin-bottom:16px;'>"
             "<div style='width:12px; height:12px; background:#f0b429; border-radius:50%; "
-            "animation:pulse 1.5s infinite;'></div>"
-            "<span style='color:#f0b429; font-weight:600;'>Agent is runningâ¦</span></div>"
+            "animation:pulse 1.5s infinite;'></div>"    "<span style='color:#f0b429; font-weight:600;'>Agent is runningâ¦</span></div>"
             "<style>@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }</style>",
             unsafe_allow_html=True
         )
         # Auto-refresh every 2 seconds while running
-        time.sleep(2)
+        time.sleep(0.5)
         st.rerun()
     elif st.session_state.run_complete:
         st.success("â Agent run complete!")
