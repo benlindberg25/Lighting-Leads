@@ -585,7 +585,9 @@ with tab_progress:
             "<style>@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }</style>",
             unsafe_allow_html=True
         )
-        # Auto-refresh every 2 seconds while running
+        if st.session_state.run_logs:
+            st.code("\n".join(st.session_state.run_logs[-200:]), language=None)
+        # Auto-refresh after showing logs
         time.sleep(0.5)
         st.rerun()
     elif st.session_state.run_complete:
