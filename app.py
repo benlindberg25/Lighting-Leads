@@ -205,7 +205,7 @@ LEADS_DIR.mkdir(parents=True, exist_ok=True)
 # THREAD-SAFE COMMUNICATION
 # Background thread writes to these; main thread reads them on each rerun.
 # âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-if not hasattr(sys, '_landscape_agent_queue')
+if not hasattr(sys, '_landscape_agent_queue'):
         sys._landscape_agent_queue = queue.Queue()
         _output_queue: queue.Queue = sys._landscape_agent_queue
 if not hasattr(sys, '_landscape_agent_proc_ref'):
