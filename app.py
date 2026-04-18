@@ -201,12 +201,16 @@ MANIFEST     = LEADS_DIR / "all_leads.json"
 DONE_FILE    = LEADS_DIR / ".completed_addresses.json"
 LEADS_DIR.mkdir(parents=True, exist_ok=True)
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # THREAD-SAFE COMMUNICATION
 # Background thread writes to these; main thread reads them on each rerun.
 # âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-_output_queue: queue.Queue = queue.Queue() if "_output_queue" not in globals() else _output_queue
-_process_ref: list = [None]           # _process_ref[0] holds the Popen object
+if not hasattr(sys, '_landscape_agent_queue')
+        sys._landscape_agent_queue = queue.Queue()
+        _output_queue: queue.Queue = sys._landscape_agent_queue
+if not hasattr(sys, '_landscape_agent_proc_ref'):
+        sys._landscape_agent_proc_ref = [None]
+        _process_ref: list = sys._landscape_agent_proc_ref  # _process_ref[0] holds the Popen objec
 _SENTINEL = "__AGENT_DONE__"          # signals thread finished
 
 # âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
@@ -581,14 +585,13 @@ with tab_progress:
         st.markdown(
             "<div style='display:flex; align-items:center; gap:10px; margin-bottom:16px;'>"
             "<div style='width:12px; height:12px; background:#f0b429; border-radius:50%; "
-            "animation:pulse 1.5s infinite;'></div>"    "<span style='color:#f0b429; font-weight:600;'>Agent is runningâ¦</span></div>"
             "<style>@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }</style>",
             unsafe_allow_html=True
         )
         if st.session_state.run_logs:
             st.code("\n".join(st.session_state.run_logs[-200:]), language=None)
         # Auto-refresh after showing logs
-        time.sleep(0.5)
+        time.sleep(2)
         st.rerun()
     elif st.session_state.run_complete:
         st.success("â Agent run complete!")
