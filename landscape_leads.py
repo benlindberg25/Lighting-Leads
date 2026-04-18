@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+""
 ════════════════════════════════════════════════════════════════════
 LUXURY HOME LANDSCAPE LIGHTING LEAD GENERATOR v2.0
 For Landscape Lighting Businesses – Long Island, NY
@@ -7,9 +7,8 @@ For Landscape Lighting Businesses – Long Island, NY
 Finds homes sold $1.3M+ in Northern Nassau + all of Suffolk County.
 Uses Redfin county-level API (2 requests vs 107 per-town searches).
 Downloads exterior photos. Generates AI landscape lighting renders.
-
 Usage:
-  python landscape_leads.py
+  python landscape_leads.p
   python landscape_leads.py --min-price=1300000 --max-age=730 --max-total=50
 
 Setup:
@@ -282,7 +281,7 @@ class RedfinScraper:
                             })
                     except Exception: continue
                 if results: break
-        except Exception as e:
+       except Exception as e:
             log.debug(f"  HTML parse error: {e}")
         log.info(f"  {len(results)} homes in {town}")
         return results
