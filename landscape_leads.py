@@ -281,7 +281,7 @@ class RedfinScraper:
                             })
                     except Exception: continue
                 if results: break
-       except Exception as e:
+        except Exception as e:
             log.debug(f"  HTML parse error: {e}")
         log.info(f"  {len(results)} homes in {town}")
         return results
