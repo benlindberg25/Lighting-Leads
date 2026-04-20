@@ -366,6 +366,15 @@ def run_agent(api_key: str, min_price: int, max_age_days: int, max_total: int):
     Run landscape_leads.py as a subprocess and stream output to session state.
     Called in a background thread.
     """
+    # Delete cached leads so every run does a fresh Redfin search.
+    # (Without this, landscape_leads.py reuses the old all_leads.json and finds 0 new leads.)
+    for stale in [MANIFEST, DONE_FILE]:
+        try:
+            if stale.exists():
+                stale.unlink()
+        except Exception:
+            pass
+
     env = os.environ.copy()
     env["OPENAI_API_KEY"] = api_key
     env["PYTHONUNBUFFERED"] = "1"  # Force unbuffered output
