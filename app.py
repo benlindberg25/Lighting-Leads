@@ -252,65 +252,57 @@ def get_api_key() -> str:
         return os.environ.get("OPENAI_API_KEY", "")
 
 
-def describe_home(client: "openai.OpenAI", image_bytes: bytes) -> str:
-    """Use GPT-4o vision to describe the home exterior for lighting design."""
-    b64 = base64.b64encode(image_bytes).decode()
-    try:
-        resp = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": [
-                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}", "detail": "high"}},
-                {"type": "text", "text": (
-                    "Describe this home exterior for a landscape lighting designer in 3 sentences:\n"
-                    "- Architectural style (colonial, contemporary, Tudor, farmhouse, etc.)\n"
-                    "- Exterior materials and colors\n"
-                    "- Key features: columns, dormers, windows, portico, garage, trees, driveway\n"
-                    "Be specific — this will be used to generate a landscape lighting rendering."
-                )}
-            ]}],
-            max_tokens=300
-        )
-        return resp.choices[0].message.content
-    except Exception as e:
-        return f"A luxury single-family home with professional landscaping and a paved driveway."
-
-
-def generate_rendering(client: "openai.OpenAI", house_description: str) -> bytes | None:
-    """Generate a DALL-E 3 landscape lighting rendering from a home description."""
+def generate_rendering(client: "openai.OpenAI", image_bytes: bytes) -> bytes | None:
+    """
+    Edit the actual uploaded home photo to add professional landscape lighting.
+    Uses gpt-image-1 image editing so the home's architecture is preserved exactly.
+    Falls back to DALL-E 2 image edit if gpt-image-1 is unavailable.
+    """
     prompt = (
-        f"Photorealistic exterior photo of a luxury home at twilight with professional landscape lighting. "
-        f"This is NOT a 3D render, NOT CGI — it looks like a real photograph taken at dusk. "
-        f"HOME: {house_description} "
-        "LIGHTING: warm 2700K LED uplights washing the facade, amber path lights lining the driveway, "
-        "architectural spotlights on columns and architectural features, tree uplighting silhouetted "
-        "against a deep blue twilight sky, step lighting, garden accent lights, warm golden glow from windows. "
-        "Magazine-quality real estate photography at the blue hour."
+        "Edit this real photo of a home to add professional landscape lighting, making it look "
+        "like a photograph taken at twilight/dusk. The home's architecture, structure, colors, "
+        "materials, and all physical features must remain EXACTLY the same — do not change the "
+        "house at all, only add lighting effects around and on it. "
+        "Add: warm 2700K LED uplights washing the facade, amber path lights lining the driveway, "
+        "architectural spotlights highlighting columns and architectural details, dramatic tree "
+        "uplighting silhouetted against a deep blue twilight sky, step lighting, garden accent "
+        "lights, warm golden glow from interior windows. "
+        "The result should look like a real twilight photograph of the exact same house with "
+        "professional landscape lighting installed. Magazine-quality real estate photography."
     )
     try:
-        resp = client.images.generate(
-            model="dall-e-3", prompt=prompt,
-            size="1792x1024", quality="hd", n=1, style="natural"
+        # Primary: gpt-image-1 image editing (preserves the actual house)
+        buf = BytesIO(image_bytes)
+        buf.name = "home.jpg"
+        resp = client.images.edit(
+            model="gpt-image-1",
+            image=buf,
+            prompt=prompt,
+            n=1,
+            size="auto",
+        )
+        return base64.b64decode(resp.data[0].b64_json)
+    except Exception:
+        pass
+
+    try:
+        # Fallback: DALL-E 2 image edit (requires PNG, max 4MB)
+        pil_img = Image.open(BytesIO(image_bytes)).convert("RGBA")
+        # Resize if too large (DALL-E 2 limit)
+        pil_img.thumbnail((1024, 1024), Image.LANCZOS)
+        png_buf = BytesIO()
+        pil_img.save(png_buf, format="PNG")
+        png_buf.seek(0)
+        png_buf.name = "home.png"
+        resp = client.images.edit(
+            image=png_buf,
+            prompt=prompt,
+            n=1,
+            size="1024x1024",
         )
         img_r = requests.get(resp.data[0].url, timeout=60)
         img_r.raise_for_status()
         return img_r.content
-    except openai.BadRequestError:
-        # Retry with simpler prompt if content policy triggers
-        try:
-            resp = client.images.generate(
-                model="dall-e-3",
-                prompt=(
-                    f"Luxury home exterior at dusk with professional landscape lighting. "
-                    f"{house_description[:150]} "
-                    "Warm LED uplighting, amber path lights, tree uplighting, twilight blue sky. "
-                    "Photorealistic real estate photography."
-                ),
-                size="1792x1024", quality="hd", n=1,
-            )
-            img_r = requests.get(resp.data[0].url, timeout=60)
-            return img_r.content
-        except Exception:
-            return None
     except Exception:
         return None
 
@@ -744,16 +736,12 @@ with tab_upload:
                 # Run the generation (triggered after rerun)
                 if st.session_state.upload_generating and st.session_state.upload_original == img_bytes:
                     with col_render:
-                        with st.spinner("Analyzing photo with GPT-4o, then generating rendering with DALL-E 3…  (~30 sec)"):
+                        with st.spinner("Editing your photo to add landscape lighting…  (~30–60 sec)"):
                             try:
                                 client = openai.OpenAI(api_key=api_key_input)
 
-                                # Step 1: describe the home
-                                description = describe_home(client, img_bytes)
-                                st.session_state.upload_description = description
-
-                                # Step 2: generate rendering
-                                rendering = generate_rendering(client, description)
+                                # Directly edit the uploaded photo — preserves the actual house
+                                rendering = generate_rendering(client, img_bytes)
 
                                 if rendering:
                                     st.session_state.upload_rendering = rendering
@@ -770,15 +758,6 @@ with tab_upload:
                 if st.session_state.upload_rendering and st.session_state.upload_original == img_bytes:
                     with col_render:
                         st.image(st.session_state.upload_rendering, use_container_width=True)
-
-                    # Description expander
-                    if st.session_state.upload_description:
-                        with st.expander("🔍 GPT-4o Home Analysis", expanded=False):
-                            st.markdown(
-                                f"<p style='color:#8b949e; font-size:13px;'>"
-                                f"{st.session_state.upload_description}</p>",
-                                unsafe_allow_html=True
-                            )
 
                     # Download buttons
                     dl1, dl2, _ = st.columns([1, 1, 3])
@@ -929,8 +908,10 @@ with tab_leads:
 
 st.markdown("---")
 st.markdown(
-    f"<p style='color:#4a5568; font-size:12px; text-align:center;'>"
-    f"💡 Landscape Lighting Lead Generator • Built with Streamlit & OpenAI "
-    f"→ <a href='https://streamlit.io' target='_blank' style='color:#f0b429;'>Deploy free</a></p>",
+    "<p style='text-align:center; color:#4a5568; font-size:12px;'>"
+    "💡 Landscape Lighting Lead Generator • "
+    "Northern Nassau &amp; Suffolk County, NY • "
+    "Powered by Zillow, Redfin, OpenAI GPT-4o &amp; DALL-E 3"
+    "</p>",
     unsafe_allow_html=True
 )
