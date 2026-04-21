@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 from io import BytesIO
 
 import streamlit as st
+from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 from PIL import Image
 import openai
 
@@ -493,6 +494,7 @@ with st.sidebar:
                     args=(api_key_input, min_price, max_age_days, max_total),
                     daemon=True,
                 )
+                add_script_run_ctx(thread)
                 thread.start()
                 st.rerun()
     else:
@@ -889,6 +891,10 @@ with tab_leads:
             })
 
         df = pd.DataFrame(rows)
+        # Cast mixed-type columns to str to avoid PyArrow conversion errors
+        for col in ["Beds", "Baths", "Sq Ft", "Sale Price", "Sold Date"]:
+            if col in df.columns:
+                df[col] = df[col].astype(str).replace("nan", "")
 
         # Filter
         price_filter = st.text_input("Filter by address or area", placeholder="e.g. Huntington…")
